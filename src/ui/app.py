@@ -378,6 +378,9 @@ def get(key):
 
 
 # ─── 사이드바 ─────────────────────────────────────────────────────────────────
+_PAGES = ["🏠 홈", "📚 단어 학습", "🔄 간격 복습 (SRS)", "💬 AI 회화", "📝 퀴즈", "📊 진도 확인", "🏆 업적"]
+
+
 def render_sidebar():
     with st.sidebar:
         st.title("🇨🇳 중국어 학습")
@@ -404,11 +407,22 @@ def render_sidebar():
 
         st.markdown("---")
 
+        # 현재 페이지를 세션 상태로 유지 — 버튼 클릭 후 rerun 해도 페이지가 바뀌지 않도록
+        current = st.session_state.get("current_page", "🏠 홈")
+        try:
+            default_idx = _PAGES.index(current)
+        except ValueError:
+            default_idx = 0
+
         menu = st.selectbox(
             "메뉴",
-            ["🏠 홈", "📚 단어 학습", "🔄 간격 복습 (SRS)", "💬 AI 회화", "📝 퀴즈", "📊 진도 확인", "🏆 업적"],
+            _PAGES,
+            index=default_idx,
             label_visibility="collapsed",
+            key="sidebar_menu_select",
         )
+        # 사용자가 직접 사이드바에서 메뉴 변경 → 세션 상태 동기화
+        st.session_state.current_page = menu
         return menu
 
 
@@ -441,16 +455,16 @@ def show_home():
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button("📚 단어 학습 시작", use_container_width=True, type="primary"):
-            st.session_state.menu = "📚 단어 학습"
+            st.session_state.current_page = "📚 단어 학습"
             st.rerun()
     with c2:
         due = len(get("srs").get_due_cards(50))
         if st.button(f"🔄 복습하기 ({due}개 대기)", use_container_width=True):
-            st.session_state.menu = "🔄 간격 복습 (SRS)"
+            st.session_state.current_page = "🔄 간격 복습 (SRS)"
             st.rerun()
     with c3:
         if st.button("💬 AI와 대화하기", use_container_width=True):
-            st.session_state.menu = "💬 AI 회화"
+            st.session_state.current_page = "💬 AI 회화"
             st.rerun()
 
     # 학습 곡선
@@ -1161,10 +1175,6 @@ def show_achievements():
 # ─── 메인 ─────────────────────────────────────────────────────────────────────
 def main():
     menu = render_sidebar()
-
-    # 세션에서 메뉴 오버라이드 처리
-    if "menu" in st.session_state:
-        menu = st.session_state.pop("menu")
 
     if menu == "🏠 홈":
         show_home()

@@ -25,6 +25,10 @@ from src.ai.agents import OrchestratorAgent, EvalAgent
 from src.speech.speech_handler import SpeechHandler
 from src.learning.gamification import GamificationSystem, calculate_level, xp_progress_in_level
 from src.learning.spaced_repetition import SpacedRepetitionSystem
+from src.ui.tone_diagram import (
+    render_all_tones_chart, render_word_tone_diagram,
+    tone_indicator_html, TONE_COLORS, TONE_NAMES_KR,
+)
 
 st.set_page_config(
     page_title="중국어 학습",
@@ -195,14 +199,29 @@ div[data-baseweb="select"] {
     color: #fff !important;
     -webkit-text-fill-color: #fff !important;
 }
-[data-baseweb="menu"], [data-baseweb="popover"] {
+[data-baseweb="menu"], [data-baseweb="popover"],
+[data-baseweb="popover"] > div,
+[data-baseweb="menu"] ul {
     background: rgba(25, 8, 55, 0.97) !important;
     border: 1px solid rgba(255,255,255,0.20) !important;
     border-radius: 14px !important;
 }
-[role="option"] { color: #fff !important; background: transparent !important; }
+[role="option"], [role="option"] span, [role="option"] div {
+    color: #fff !important; -webkit-text-fill-color: #fff !important;
+    background: transparent !important;
+}
 [role="option"]:hover, [aria-selected="true"] {
     background: rgba(255,255,255,0.15) !important;
+}
+/* 사이드바 내 드롭다운 리스트 배경 보장 */
+section[data-testid="stSidebar"] [data-baseweb="popover"],
+section[data-testid="stSidebar"] [data-baseweb="menu"],
+section[data-testid="stSidebar"] ul[role="listbox"] {
+    background: rgba(25, 8, 55, 0.97) !important;
+}
+section[data-testid="stSidebar"] [role="option"],
+section[data-testid="stSidebar"] [role="option"] * {
+    color: #fff !important; -webkit-text-fill-color: #fff !important;
 }
 
 /* ── chat input ── */
@@ -378,12 +397,12 @@ def get(key):
 
 
 # ─── 사이드바 ─────────────────────────────────────────────────────────────────
-_PAGES = ["🏠 홈", "📚 단어 학습", "🔄 간격 복습 (SRS)", "💬 AI 회화", "📝 퀴즈", "📊 진도 확인", "🏆 업적"]
+_PAGES = ["🏠 홈", "📚 단어 학습", "🎙️ 발음 연습", "🔄 간격 복습 (SRS)", "💬 AI 회화", "📝 퀴즈", "📊 진도 확인", "🏆 업적"]
 
 
 def nav_to(page: str):
-    """페이지 이동 헬퍼: 세션 키를 직접 설정하고 rerun."""
-    st.session_state["sidebar_sel"] = page
+    """페이지 이동 헬퍼: 중간 키에 저장 후 rerun — selectbox 렌더 전에 적용."""
+    st.session_state["_nav_target"] = page
     st.rerun()
 
 
@@ -413,10 +432,10 @@ def render_sidebar():
 
         st.markdown("---")
 
-        # key="sidebar_sel" 로 세션 상태와 직접 연결.
-        # nav_to()에서 st.session_state["sidebar_sel"] = page 로 바꾸면
-        # 다음 rerun 때 selectbox 가 자동으로 그 값을 보여줌.
-        if "sidebar_sel" not in st.session_state:
+        # nav_to()가 설정한 _nav_target을 selectbox 렌더 전에 적용
+        if "_nav_target" in st.session_state:
+            st.session_state["sidebar_sel"] = st.session_state.pop("_nav_target")
+        elif "sidebar_sel" not in st.session_state:
             st.session_state["sidebar_sel"] = "🏠 홈"
 
         menu = st.selectbox(
@@ -477,6 +496,58 @@ def show_home():
                       color_discrete_sequence=["#764ba2"])
         fig.update_layout(height=250, margin=dict(l=0, r=0, t=30, b=0))
         st.plotly_chart(fig, use_container_width=True)
+
+
+# ─── 간화 패턴 데이터 ──────────────────────────────────────────────────────────
+_SIMPLIFICATION_PATTERNS = {
+    # 부수 간화: 번체 부수 → (간체 부수, 설명)
+    "訁": ("讠", "말씀 언 부수 간화"),
+    "釒": ("钅", "쇠 금 부수 간화"),
+    "飠": ("饣", "밥 식 부수 간화"),
+    "糹": ("纟", "실 사 부수 간화"),
+    "車": ("车", "수레 거 간화"),
+    "門": ("门", "문 문 간화"),
+    "頁": ("页", "머리 혈 부수 간화"),
+    "馬": ("马", "말 마 간화"),
+    "鳥": ("鸟", "새 조 간화"),
+    "魚": ("鱼", "물고기 어 간화"),
+    # 전체 글자 간화
+    "國": ("国", "내부 간략화"),
+    "學": ("学", "상부 간략화"),
+    "書": ("书", "초서체 기반 간화"),
+    "東": ("东", "초서체 기반 간화"),
+    "來": ("来", "가로획 생략"),
+    "見": ("见", "하부 간략화"),
+    "買": ("买", "상부 생략"),
+    "賣": ("卖", "상부 간략화"),
+    "聽": ("听", "동음자 대체"),
+    "寫": ("写", "하부 간략화"),
+    "華": ("华", "대폭 간략화"),
+    "開": ("开", "문(門) 생략"),
+    "關": ("关", "문(門) 생략"),
+    "謝": ("谢", "讠 부수 간화"),
+    "說": ("说", "讠 부수 간화"),
+    "話": ("话", "讠 부수 간화"),
+    "語": ("语", "讠 부수 간화"),
+    "認": ("认", "讠 부수 간화"),
+    "歡": ("欢", "대폭 간략화"),
+    "現": ("现", "见 부수 간화"),
+    "麼": ("么", "대폭 간략화"),
+    "裡": ("里", "동음자 대체"),
+    "裏": ("里", "동음자 대체"),
+    "後": ("后", "고대 한자 차용"),
+    "師": ("师", "좌변 간략화"),
+    "習": ("习", "상부 생략"),
+}
+
+
+def _get_simplification_note(traditional_char: str, simplified_char: str) -> str:
+    """번체→간체 변환에 대한 간화 패턴 설명 반환."""
+    if traditional_char in _SIMPLIFICATION_PATTERNS:
+        expected_simp, desc = _SIMPLIFICATION_PATTERNS[traditional_char]
+        if expected_simp == simplified_char:
+            return desc
+    return ""
 
 
 # ─── 단어 학습 ─────────────────────────────────────────────────────────────────
@@ -580,10 +651,13 @@ def show_vocabulary_lesson():
     is_same = (simplified == traditional)
     is_learned = st.session_state.lesson_learned.get(idx, False)
 
-    # ── 병음 + 진행 표시 ────────────────────────────────────────────────────────
+    # ── 병음 + 성조 배지 + 진행 표시 ──────────────────────────────────────────
+    syllables = get("parser").get_pinyin_with_tones(simplified)
+    tone_badges = " ".join(tone_indicator_html(s["tone_number"]) for s in syllables)
     st.markdown(
-        f"<div style='text-align:center; font-size:1rem; opacity:0.6; margin-bottom:4px;'>"
-        f"{word.get('pinyin', '')} &nbsp;|&nbsp; {idx+1}/{total}</div>",
+        f"<div style='text-align:center; font-size:1rem; opacity:0.85; margin-bottom:4px;'>"
+        f"{word.get('pinyin', '')} {tone_badges}"
+        f" &nbsp;|&nbsp; {idx+1}/{total}</div>",
         unsafe_allow_html=True,
     )
 
@@ -627,10 +701,17 @@ def show_vocabulary_lesson():
                 unsafe_allow_html=True,
             )
 
-    # ── 한자 설명 ──────────────────────────────────────────────────────────────
+    # ── 한자 설명 + 간화 패턴 ───────────────────────────────────────────────────
     if not is_same:
         char_pairs = [(s, t) for s, t in zip(simplified, traditional) if s != t]
-        diff_note = "  ·  변환된 글자: " + "  ".join(f"{s}→{t}" for s, t in char_pairs) if char_pairs else ""
+        diff_parts = []
+        for s, t in char_pairs:
+            note = _get_simplification_note(t, s)
+            if note:
+                diff_parts.append(f"{t}→{s} ({note})")
+            else:
+                diff_parts.append(f"{t}→{s}")
+        diff_note = "  \n변환된 글자: " + " · ".join(diff_parts) if diff_parts else ""
         st.info(
             f"📖 **간체자(简体字)** — 1950년대 중국이 획수를 줄여 만든 현대 표준 문자.  \n"
             f"**번체자(繁體字) = 한자(漢字)** — 수천 년 사용된 정자(正字). 한국·대만·홍콩 기준.{diff_note}"
@@ -705,6 +786,205 @@ def show_vocabulary_lesson():
             for k in ["lesson_words", "lesson_session_id", "lesson_learned", "lesson_idx"]:
                 st.session_state.pop(k, None)
             st.rerun()
+
+
+# ─── 발음 연습 ─────────────────────────────────────────────────────────────────
+def show_pronunciation():
+    st.header("🎙️ 발음 연습")
+
+    parser = get("parser")
+    vocab = get("vocabulary")
+
+    # ── Section A: 성조 소개 ──────────────────────────────────────────────────
+    st.subheader("A. 사성 소개")
+    st.markdown(
+        "중국어는 **성조 언어**입니다. 같은 음절이라도 성조에 따라 의미가 완전히 달라집니다."
+    )
+
+    # 전체 성조 다이어그램
+    chart_png = render_all_tones_chart()
+    if chart_png:
+        st.image(chart_png, use_container_width=True)
+    else:
+        st.info("matplotlib가 설치되어 있지 않아 다이어그램을 표시할 수 없습니다.")
+
+    # 사성 표 (인라인 배지 포함)
+    st.markdown("#### 사성 + 경성")
+    tone_table = """
+| 성조 | 이름 | 피치 패턴 | 설명 |
+|------|------|-----------|------|
+| {} 1성 | 음평 (阴平) | 55 — 높고 평탄 | 높은 음을 일정하게 유지 |
+| {} 2성 | 양평 (阳平) | 35 — 올라감 | 중간에서 높은 음으로 상승 |
+| {} 3성 | 상성 (上声) | 214 — 내려갔다 올라감 | 낮게 내려갔다가 다시 올라감 |
+| {} 4성 | 거성 (去声) | 51 — 내려감 | 높은 음에서 급격히 하강 |
+| {} 경성 | 경성 (轻声) | — | 짧고 가볍게 |
+""".format(
+        tone_indicator_html(1), tone_indicator_html(2),
+        tone_indicator_html(3), tone_indicator_html(4),
+        tone_indicator_html(5),
+    )
+    st.markdown(tone_table, unsafe_allow_html=True)
+
+    # "ma" 예시 + TTS
+    st.markdown("#### 대표 예시: **ma** 의 다섯 가지 의미")
+    ma_examples = [
+        ("妈", "mā", "1성", "엄마"),
+        ("麻", "má", "2성", "삼(대마)"),
+        ("马", "mǎ", "3성", "말"),
+        ("骂", "mà", "4성", "욕하다"),
+        ("吗", "ma", "경성", "~인가?"),
+    ]
+    cols = st.columns(5)
+    for col, (char, py, tone_label, meaning) in zip(cols, ma_examples):
+        with col:
+            st.markdown(
+                f"<div style='text-align:center;'>"
+                f"<div style='font-size:2.5rem; font-weight:900;'>{char}</div>"
+                f"<div style='font-size:0.9rem; color:#fde68a;'>{py}</div>"
+                f"<div style='font-size:0.75rem; opacity:0.7;'>{tone_label}</div>"
+                f"<div style='font-size:0.75rem;'>{meaning}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            if st.button(f"🔊 {char}", key=f"ma_tts_{char}", use_container_width=True):
+                tts_data = get("speech").tts_bytes(char)
+                if tts_data:
+                    import base64
+                    b64 = base64.b64encode(tts_data).decode()
+                    st.markdown(
+                        f'<audio autoplay src="data:audio/mp3;base64,{b64}"></audio>',
+                        unsafe_allow_html=True,
+                    )
+
+    st.markdown("---")
+
+    # ── Section B: 단어 성조 탐색 ────────────────────────────────────────────
+    st.subheader("B. 단어 성조 탐색")
+
+    word_options = [f"{w['simplified']} ({w.get('pinyin', '')})" for w in vocab]
+    selected_idx = st.selectbox(
+        "단어를 선택하세요",
+        range(len(word_options)),
+        format_func=lambda i: word_options[i],
+        key="pron_word_select",
+    )
+
+    if selected_idx is not None:
+        word = vocab[selected_idx]
+        simplified = word["simplified"]
+        syllables = parser.get_pinyin_with_tones(simplified)
+        tone_nums = parser.get_tone_numbers(simplified)
+
+        # 한자 표시 + 음절별 성조 배지
+        badge_html = " ".join(
+            f"{syl['syllable']} {tone_indicator_html(syl['tone_number'])}"
+            for syl in syllables
+        )
+        st.markdown(
+            f"<div style='text-align:center; margin:16px 0;'>"
+            f"<div style='font-size:3.5rem; font-weight:900;'>{simplified}</div>"
+            f"<div style='font-size:1.1rem; margin-top:8px;'>{badge_html}</div>"
+            f"<div style='font-size:0.85rem; color:#fde68a; margin-top:4px;'>"
+            f"{word.get('pinyin', '')}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+        # 성조 곡선 다이어그램
+        diagram_png = render_word_tone_diagram(syllables)
+        if diagram_png:
+            st.image(diagram_png, use_container_width=True)
+
+        # TTS 재생
+        if st.button("🔊 발음 듣기", key="pron_tts_word", use_container_width=True):
+            tts_data = get("speech").tts_bytes(simplified)
+            if tts_data:
+                import base64
+                b64 = base64.b64encode(tts_data).decode()
+                st.markdown(
+                    f'<audio controls autoplay style="width:100%;height:54px;border-radius:12px;" '
+                    f'src="data:audio/mp3;base64,{b64}"></audio>',
+                    unsafe_allow_html=True,
+                )
+
+        # 뜻
+        defs = word.get("definitions", [])
+        if defs:
+            st.markdown(f"**뜻:** {' / '.join(defs)}")
+
+    st.markdown("---")
+
+    # ── Section C: 성조 퀴즈 ──────────────────────────────────────────────────
+    st.subheader("C. 성조 퀴즈")
+    st.caption("한자를 보고 올바른 성조 번호를 맞추세요!")
+
+    if "tone_quiz" not in st.session_state:
+        if st.button("🎯 성조 퀴즈 시작", type="primary", use_container_width=True):
+            import random
+            quiz_words = random.sample(vocab, min(5, len(vocab)))
+            questions = []
+            for w in quiz_words:
+                tones = parser.get_tone_numbers(w["simplified"])
+                if tones:
+                    questions.append({
+                        "word": w["simplified"],
+                        "pinyin": w.get("pinyin", ""),
+                        "tones": tones,
+                    })
+            st.session_state.tone_quiz = questions
+            st.rerun()
+    else:
+        questions = st.session_state.tone_quiz
+
+        with st.form("tone_quiz_form"):
+            user_answers = {}
+            for i, q in enumerate(questions):
+                st.markdown(
+                    f"**Q{i+1}.** 다음 단어의 각 글자 성조를 순서대로 입력하세요: "
+                    f"<span style='font-size:1.8rem; font-weight:700;'>{q['word']}</span>",
+                    unsafe_allow_html=True,
+                )
+                st.caption(f"글자 수: {len(q['tones'])}개  |  1~4 또는 5(경성)를 공백으로 구분")
+                user_answers[i] = st.text_input(
+                    f"성조 번호 (예: 3 3)", key=f"tq_{i}",
+                    label_visibility="collapsed",
+                )
+
+            submitted = st.form_submit_button("✅ 채점하기", type="primary")
+
+        if submitted:
+            correct = 0
+            total = len(questions)
+            for i, q in enumerate(questions):
+                answer_str = user_answers.get(i, "").strip()
+                try:
+                    user_tones = [int(x) for x in answer_str.split()]
+                except ValueError:
+                    user_tones = []
+
+                if user_tones == q["tones"]:
+                    correct += 1
+                    badge_html = " ".join(tone_indicator_html(t) for t in q["tones"])
+                    st.success(f"Q{i+1} ✓ {q['word']} ({q['pinyin']}) — {badge_html}", icon="✅")
+                else:
+                    expected = " ".join(str(t) for t in q["tones"])
+                    badge_html = " ".join(tone_indicator_html(t) for t in q["tones"])
+                    st.markdown(
+                        f"Q{i+1} ✗ {q['word']} ({q['pinyin']}) — 정답: {expected} {badge_html}",
+                        unsafe_allow_html=True,
+                    )
+
+            pct = correct / total * 100 if total > 0 else 0
+            st.markdown(f"### 결과: {correct}/{total} ({pct:.0f}%)")
+            if pct >= 80:
+                st.success("🎉 훌륭해요!")
+                get("gamification").award_xp("quiz_correct")
+            elif pct >= 50:
+                st.warning("💪 조금 더 연습하면 완벽해요!")
+
+            if st.button("🔄 다시 도전"):
+                del st.session_state["tone_quiz"]
+                st.rerun()
 
 
 # ─── SRS 복습 ─────────────────────────────────────────────────────────────────
@@ -1179,6 +1459,8 @@ def main():
         show_home()
     elif menu == "📚 단어 학습":
         show_vocabulary_lesson()
+    elif menu == "🎙️ 발음 연습":
+        show_pronunciation()
     elif menu == "🔄 간격 복습 (SRS)":
         show_srs_review()
     elif menu == "💬 AI 회화":

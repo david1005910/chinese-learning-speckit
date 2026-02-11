@@ -131,6 +131,56 @@ class ChineseDataParser:
              'definitions': ['안녕히 가세요', 'goodbye'], 'level': 'HSK1'},
         ]
     
+    def get_tone_numbers(self, chinese_text: str) -> List[int]:
+        """
+        한자 텍스트에서 성조 번호(1-5) 추출.
+        5 = 경성(轻声).
+
+        Args:
+            chinese_text: 중국어 텍스트
+
+        Returns:
+            성조 번호 리스트 (예: [3, 3] for 你好)
+        """
+        tone3_list = pinyin(chinese_text, style=Style.TONE3)
+        tones = []
+        for syllable_group in tone3_list:
+            s = syllable_group[0]
+            # 마지막 글자가 숫자면 성조 번호
+            if s and s[-1].isdigit():
+                tones.append(int(s[-1]))
+            else:
+                # 숫자가 없으면 경성(5)
+                tones.append(5)
+        return tones
+
+    def get_pinyin_with_tones(self, chinese_text: str) -> List[Dict]:
+        """
+        음절별 병음과 성조 정보를 반환.
+
+        Args:
+            chinese_text: 중국어 텍스트
+
+        Returns:
+            [{"syllable": "nǐ", "tone_number": 3, "tone3": "ni3"}, ...]
+        """
+        tone_list = pinyin(chinese_text, style=Style.TONE)
+        tone3_list = pinyin(chinese_text, style=Style.TONE3)
+        result = []
+        for tone_group, tone3_group in zip(tone_list, tone3_list):
+            syllable = tone_group[0]
+            t3 = tone3_group[0]
+            if t3 and t3[-1].isdigit():
+                tone_num = int(t3[-1])
+            else:
+                tone_num = 5
+            result.append({
+                "syllable": syllable,
+                "tone_number": tone_num,
+                "tone3": t3,
+            })
+        return result
+
     def search_word(self, query: str) -> Optional[Dict]:
         """
         단어 검색

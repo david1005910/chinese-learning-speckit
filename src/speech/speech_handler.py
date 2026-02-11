@@ -1,15 +1,20 @@
 """
-음성 합성 모듈 (TTS)
-Google Text-to-Speech 사용
+음성 합성/인식 모듈 (TTS / STT)
+Google Text-to-Speech + SpeechRecognition 사용
 """
 
+import io
 import os
 from typing import Optional
 try:
     from gtts import gTTS
 except ImportError:
     gTTS = None
-    print("Warning: gtts not installed. TTS features will be disabled.")
+
+try:
+    import speech_recognition as sr
+except ImportError:
+    sr = None
 
 
 class SpeechHandler:
@@ -24,6 +29,38 @@ class SpeechHandler:
         os.makedirs(self.audio_dir, exist_ok=True)
         self.tts_enabled = gTTS is not None
     
+    def tts_bytes(self, text: str, lang: str = 'zh-cn', slow: bool = False) -> Optional[bytes]:
+        """텍스트를 MP3 바이트로 변환 (st.audio()에 직접 전달용)"""
+        if not self.tts_enabled or not text.strip():
+            return None
+        try:
+            tts = gTTS(text=text, lang=lang, slow=slow)
+            buf = io.BytesIO()
+            tts.write_to_fp(buf)
+            return buf.getvalue()
+        except Exception as e:
+            print(f"TTS bytes error: {e}")
+            return None
+
+    def stt_from_bytes(self, audio_bytes: bytes, language: str = "zh-CN") -> Optional[str]:
+        """
+        오디오 바이트를 텍스트로 변환 (STT).
+        st.audio_input()이 반환하는 WAV bytes를 받아 처리.
+        """
+        if sr is None:
+            return None
+        try:
+            recognizer = sr.Recognizer()
+            audio_file = io.BytesIO(audio_bytes)
+            with sr.AudioFile(audio_file) as source:
+                audio_data = recognizer.record(source)
+            return recognizer.recognize_google(audio_data, language=language)
+        except sr.UnknownValueError:
+            return ""          # 인식 불가 (무음 등)
+        except Exception as e:
+            print(f"STT error: {e}")
+            return None
+
     def text_to_speech(self, text: str, lang: str = 'zh-cn', slow: bool = False) -> Optional[str]:
         """
         텍스트를 음성으로 변환

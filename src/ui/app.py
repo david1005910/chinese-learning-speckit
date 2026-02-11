@@ -10,6 +10,13 @@ import json
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
+# .env 자동 로드
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+except ImportError:
+    pass
+
 from src.core.data_parser import ChineseDataParser
 from src.core.lesson_manager import LessonManager
 from src.core.progress_tracker import ProgressTracker
@@ -26,26 +33,312 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─── CSS 스타일 ───────────────────────────────────────────────────────────────
+# ─── CSS 스타일 (Gooey / Liquid Morphism) ──────────────────────────────────────
 st.markdown("""
 <style>
-.word-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
-    padding: 24px;
-    color: white;
-    text-align: center;
-    margin-bottom: 12px;
+/* ── 최상단 흰색 공백 제거 ── */
+html, body {
+    background: linear-gradient(135deg, #f97316 0%, #ec4899 35%, #8b5cf6 65%, #3b82f6 100%) !important;
+    margin: 0 !important; padding: 0 !important;
 }
-.word-card .chinese { font-size: 3rem; font-weight: bold; }
-.word-card .pinyin  { font-size: 1.2rem; opacity: 0.9; margin-top: 4px; }
-.xp-bar { height: 12px; border-radius: 6px; background: #e0e0e0; }
-.xp-fill { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #f093fb, #f5576c); }
-.badge-unlocked   { background: #ffd700; border-radius: 12px; padding: 6px 12px; margin: 4px; display: inline-block; }
-.badge-locked     { background: #e0e0e0; border-radius: 12px; padding: 6px 12px; margin: 4px; display: inline-block; opacity: 0.5; }
-.metric-card      { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.correction-box   { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 4px; margin: 8px 0; }
-.suggestion-box   { background: #d4edda; border-left: 4px solid #28a745; padding: 12px; border-radius: 4px; margin: 8px 0; }
+[data-testid="stDecoration"] { display: none !important; }
+[data-testid="stHeader"],
+.stAppHeader, .stAppViewBlockContainer ~ div {
+    background: transparent !important;
+    border-bottom: none !important;
+}
+#MainMenu { visibility: hidden; }
+header { background: transparent !important; }
+
+/* ── 전체 배경: 활기찬 액체 그라디언트 + 블롭 ── */
+.stApp {
+    background: linear-gradient(135deg, #f97316 0%, #ec4899 35%, #8b5cf6 65%, #3b82f6 100%) !important;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+/* 장식용 블롭 ── */
+.stApp::before {
+    content: '';
+    position: fixed;
+    top: -80px; left: -80px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(249,115,22,0.55) 0%, transparent 70%);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+    animation: blobFloat 8s ease-in-out infinite alternate;
+}
+.stApp::after {
+    content: '';
+    position: fixed;
+    bottom: -80px; right: -60px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(59,130,246,0.55) 0%, transparent 70%);
+    border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%;
+    filter: blur(45px);
+    pointer-events: none;
+    z-index: 0;
+    animation: blobFloat 10s ease-in-out infinite alternate-reverse;
+}
+@keyframes blobFloat {
+    0%   { transform: translate(0,0) scale(1); }
+    100% { transform: translate(30px,20px) scale(1.08); }
+}
+
+/* ── 사이드바 액체 패널 ── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 100%) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border-right: 1px solid rgba(255,255,255,0.30) !important;
+    box-shadow: 4px 0 32px rgba(236,72,153,0.20), inset 0px 1px 2px rgba(255,255,255,0.35);
+    border-radius: 0 32px 32px 0 !important;
+}
+section[data-testid="stSidebar"] * { color: #fff !important; text-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+
+/* ── 메인 컨텐츠 액체 패널 ── */
+[data-testid="stMainBlockContainer"] {
+    background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.10) 100%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 32px;
+    border: 1px solid rgba(255,255,255,0.32);
+    box-shadow: 0px 12px 32px rgba(0,0,0,0.18),
+                inset 0px 1px 2px rgba(255,255,255,0.35);
+    padding: 28px !important;
+    margin: 12px !important;
+    position: relative;
+    overflow: visible;
+}
+/* 패널 상단 광택 하이라이트 */
+[data-testid="stMainBlockContainer"]::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 32px 32px 0 0;
+    pointer-events: none;
+}
+
+/* ── 글자 색상 ── */
+.stApp, .stApp p, .stApp label, .stApp h1, .stApp h2, .stApp h3,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span {
+    color: #fff !important;
+    text-shadow: 0px 2px 4px rgba(0,0,0,0.28);
+}
+
+/* ── 버튼 ── */
+.stButton > button {
+    background: linear-gradient(135deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.12) 100%) !important;
+    border: 1px solid rgba(255,255,255,0.38) !important;
+    border-radius: 18px !important;
+    color: #fff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25) !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.16), inset 0px 1px 2px rgba(255,255,255,0.40) !important;
+    transition: all 0.22s ease;
+    font-weight: 600;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.22) 100%) !important;
+    box-shadow: 0 10px 28px rgba(236,72,153,0.35), inset 0px 1px 2px rgba(255,255,255,0.5) !important;
+    transform: translateY(-1px);
+}
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, rgba(236,72,153,0.75) 0%, rgba(139,92,246,0.75) 100%) !important;
+    box-shadow: 0 8px 24px rgba(236,72,153,0.40), inset 0px 1px 2px rgba(255,255,255,0.35) !important;
+}
+
+/* ── 입력 필드 (글자색 강제 지정) ── */
+input, input:focus, input:active,
+textarea, textarea:focus, textarea:active {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    background: rgba(30, 10, 60, 0.82) !important;
+}
+input::placeholder, textarea::placeholder {
+    color: rgba(255, 210, 235, 0.55) !important;
+    -webkit-text-fill-color: rgba(255, 210, 235, 0.55) !important;
+    opacity: 1 !important;
+}
+.stTextInput input, .stTextArea textarea,
+[data-baseweb="input"] input, [data-baseweb="textarea"] textarea,
+[data-baseweb="base-input"] input, [data-baseweb="base-input"] textarea {
+    background: rgba(30, 10, 60, 0.82) !important;
+    border: 1px solid rgba(255,255,255,0.30) !important;
+    border-radius: 14px !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    caret-color: #f9a8d4 !important;
+    backdrop-filter: blur(10px) !important;
+}
+[data-baseweb="base-input"], [data-baseweb="input"], [data-baseweb="textarea"] {
+    background: rgba(30, 10, 60, 0.82) !important;
+    border-radius: 14px !important;
+}
+
+/* ── Selectbox 드롭다운 ── */
+[data-baseweb="select"] > div,
+[data-baseweb="select"] [class*="ValueContainer"],
+div[data-baseweb="select"] {
+    background: rgba(30, 10, 60, 0.82) !important;
+    border: 1px solid rgba(255,255,255,0.28) !important;
+    border-radius: 14px !important;
+}
+[data-baseweb="select"] span,
+[data-baseweb="select"] div,
+[data-baseweb="select"] [class*="singleValue"],
+[data-baseweb="select"] [class*="placeholder"] {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+}
+[data-baseweb="menu"], [data-baseweb="popover"] {
+    background: rgba(25, 8, 55, 0.97) !important;
+    border: 1px solid rgba(255,255,255,0.20) !important;
+    border-radius: 14px !important;
+}
+[role="option"] { color: #fff !important; background: transparent !important; }
+[role="option"]:hover, [aria-selected="true"] {
+    background: rgba(255,255,255,0.15) !important;
+}
+
+/* ── chat input ── */
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"] {
+    background: rgba(30, 10, 50, 0.65) !important;
+    border: 1px solid rgba(255,255,255,0.28) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18), inset 0px 1px 2px rgba(255,255,255,0.25) !important;
+}
+[data-testid="stChatInput"] textarea {
+    color: #fff !important;
+    caret-color: #f9a8d4 !important;
+    background: transparent !important;
+}
+[data-testid="stChatInput"] textarea::placeholder {
+    color: rgba(255, 220, 240, 0.55) !important;
+}
+
+/* ── 메트릭 카드 ── */
+[data-testid="stMetric"] {
+    background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 100%);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.30);
+    border-radius: 24px;
+    padding: 14px 18px;
+    box-shadow: 0px 8px 24px rgba(0,0,0,0.15),
+                inset 0px 1px 2px rgba(255,255,255,0.30);
+}
+[data-testid="stMetricValue"] { color: #fde68a !important; font-weight: 700; text-shadow: 0 2px 8px rgba(249,115,22,0.45); }
+[data-testid="stMetricLabel"] { color: rgba(255,255,255,0.85) !important; }
+
+/* ── 단어 카드 ── */
+.word-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.10) 100%);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.32);
+    border-radius: 28px;
+    padding: 32px;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 16px;
+    box-shadow: 0px 12px 32px rgba(0,0,0,0.18),
+                inset 0px 1px 2px rgba(255,255,255,0.38);
+    text-shadow: 0px 2px 4px rgba(0,0,0,0.28);
+    position: relative;
+    overflow: hidden;
+}
+.word-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 28px 28px 0 0;
+}
+.word-card .chinese { font-size: 3rem; font-weight: bold; color: #fff; text-shadow: 0 2px 12px rgba(236,72,153,0.5); }
+.word-card .pinyin  { font-size: 1.2rem; margin-top: 6px; color: #fde68a; text-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+
+/* ── XP 바 ── */
+.xp-bar  { height: 12px; border-radius: 8px; background: rgba(255,255,255,0.18); overflow: hidden; }
+.xp-fill { height: 12px; border-radius: 8px;
+           background: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6, #3b82f6);
+           box-shadow: 0 0 12px rgba(236,72,153,0.6); }
+
+/* ── 뱃지 ── */
+.badge-unlocked {
+    background: linear-gradient(135deg, rgba(255,215,0,0.35) 0%, rgba(249,115,22,0.25) 100%);
+    border: 1px solid rgba(255,215,0,0.55);
+    border-radius: 18px; padding: 8px 16px; margin: 4px;
+    display: inline-block; color: #fde68a !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px rgba(249,115,22,0.30), inset 0 1px 1px rgba(255,255,255,0.30);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.badge-locked {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 18px; padding: 8px 16px; margin: 4px;
+    display: inline-block; opacity: 0.40; backdrop-filter: blur(8px);
+}
+
+/* ── metric-card ── */
+.metric-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 100%);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 24px; padding: 18px;
+    box-shadow: 0px 8px 24px rgba(0,0,0,0.15), inset 0 1px 2px rgba(255,255,255,0.28);
+    color: #fff !important;
+}
+
+/* ── 교정/제안 박스 ── */
+.correction-box {
+    background: linear-gradient(135deg, rgba(251,191,36,0.20) 0%, rgba(245,158,11,0.10) 100%);
+    border-left: 4px solid rgba(251,191,36,0.80);
+    backdrop-filter: blur(10px);
+    border-radius: 14px; padding: 14px; margin: 8px 0;
+    color: #fde68a !important;
+    box-shadow: 0 4px 14px rgba(245,158,11,0.18);
+}
+.suggestion-box {
+    background: linear-gradient(135deg, rgba(52,211,153,0.20) 0%, rgba(16,185,129,0.10) 100%);
+    border-left: 4px solid rgba(52,211,153,0.80);
+    backdrop-filter: blur(10px);
+    border-radius: 14px; padding: 14px; margin: 8px 0;
+    color: #a7f3d0 !important;
+    box-shadow: 0 4px 14px rgba(16,185,129,0.18);
+}
+
+/* ── expander ── */
+[data-testid="stExpander"] {
+    background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    border-radius: 20px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+}
+
+/* ── info/success/warning 박스 ── */
+[data-testid="stAlert"] {
+    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%) !important;
+    border: 1px solid rgba(255,255,255,0.28) !important;
+    border-radius: 18px !important;
+    backdrop-filter: blur(10px) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+}
+
+/* ── chat 메시지 ── */
+[data-testid="stChatMessage"] {
+    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%) !important;
+    border: 1px solid rgba(255,255,255,0.25) !important;
+    border-radius: 20px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.14), inset 0 1px 2px rgba(255,255,255,0.28) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -178,100 +471,227 @@ def show_vocabulary_lesson():
     st.header("📚 단어 학습")
 
     vocab = get("vocabulary")
-    total_lessons = max(1, len(vocab) // 10)
 
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        lesson_num = st.slider("레슨 선택", 0, total_lessons - 1, 0,
-                               help=f"총 {total_lessons}개 레슨 (레슨당 10단어)")
-    with c2:
-        words_per_lesson = st.select_slider("단어 수", [5, 10, 15, 20], value=10)
-
-    if st.button("📖 레슨 시작", type="primary"):
-        words = get("lesson_manager").get_lesson(lesson_num, words_per_lesson)
-        if not words:
-            st.warning("이 레슨에 단어가 없습니다.")
-            return
-        session_id = get("tracker").start_session(lesson_num)
-        st.session_state.lesson_words = words
-        st.session_state.lesson_session_id = session_id
-        st.session_state.lesson_learned = {}
-
+    # ── 레슨이 진행 중이 아닐 때만 설정 UI 표시 ─────────────────────────────
     if "lesson_words" not in st.session_state:
-        st.info("레슨 번호를 선택하고 시작 버튼을 누르세요.")
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            words_per_lesson = st.select_slider("레슨당 단어 수", [10, 20, 30, 50, 100], value=30)
+        with c2:
+            total_lessons = max(1, len(vocab) // words_per_lesson)
+            if total_lessons > 1:
+                lesson_num = st.slider(
+                    "레슨 선택", 0, total_lessons - 1, 0,
+                    help=f"총 {total_lessons}개 레슨 (레슨당 {words_per_lesson}단어, 총 {len(vocab)}단어)"
+                )
+            else:
+                lesson_num = 0
+                st.info(f"📖 레슨 1 (전체 {len(vocab)}단어, {words_per_lesson}단어/레슨으로 1개 레슨)")
 
-        # 오늘의 단어 미리보기 (3개)
-        st.subheader("오늘의 미리보기 단어")
-        for w in vocab[:3]:
-            st.markdown(f"""
-<div class="word-card">
-  <div class="chinese">{w['simplified']}</div>
-  <div class="pinyin">{w.get('pinyin', '')}</div>
-</div>""", unsafe_allow_html=True)
+        if st.button("📖 레슨 시작", type="primary", use_container_width=True):
+            words = get("lesson_manager").get_lesson(lesson_num, words_per_lesson)
+            if not words:
+                st.warning("이 레슨에 단어가 없습니다.")
+                return
+            # 이전 레슨 위젯 키 전부 정리
+            if "lesson_words" in st.session_state:
+                for j in range(len(st.session_state.lesson_words)):
+                    for pfx in ("learned_", "show_def_", "tts_bytes_"):
+                        st.session_state.pop(f"{pfx}{j}", None)
+            session_id = get("tracker").start_session(lesson_num)
+            st.session_state.lesson_words = words
+            st.session_state.lesson_session_id = session_id
+            st.session_state.lesson_learned = {}
+            st.session_state.lesson_idx = 0   # ← 항상 0으로 리셋
+            st.rerun()
+
+        st.info("레슨 번호를 선택하고 시작 버튼을 누르세요.")
         return
 
     words = st.session_state.lesson_words
-    st.success(f"레슨 진행 중 — {len(words)}개 단어")
+    total = len(words)
 
-    for i, word in enumerate(words):
-        with st.expander(f"{i+1}. **{word['simplified']}** — {word.get('pinyin', '')}", expanded=(i == 0)):
-            col_info, col_actions = st.columns([3, 1])
+    # 현재 단어 인덱스
+    if "lesson_idx" not in st.session_state:
+        st.session_state.lesson_idx = 0
 
-            with col_info:
-                st.markdown(f"""
-<div class="word-card">
-  <div class="chinese">{word['simplified']}</div>
-  <div class="pinyin">{word.get('pinyin', '')}</div>
-</div>""", unsafe_allow_html=True)
-                defs = word.get("definitions", [])
-                if defs:
-                    st.markdown(f"**의미:** {' / '.join(defs)}")
-                if word.get("traditional") and word["traditional"] != word["simplified"]:
-                    st.caption(f"번체자: {word['traditional']}")
-
-            with col_actions:
-                # TTS 발음
-                if st.button("🔊 발음", key=f"tts_{i}"):
-                    audio = get("speech").text_to_speech(word["simplified"])
-                    if audio and os.path.exists(audio):
-                        st.audio(audio)
-                    else:
-                        st.info(f"발음: {word.get('pinyin', '')}")
-
-                # 학습 완료 체크
-                checked = st.checkbox("✅ 외웠어요", key=f"learned_{i}",
-                                       value=st.session_state.lesson_learned.get(i, False))
-                if checked and not st.session_state.lesson_learned.get(i):
-                    st.session_state.lesson_learned[i] = True
-                    get("tracker").update_word_mastery(word, True)
-                    xp_result = get("gamification").award_xp("word_learned")
-                    st.success(f"+{xp_result['xp_gained']} XP")
-                    if xp_result.get("leveled_up"):
-                        st.balloons()
-                        st.success(f"🎉 레벨업! Lv.{xp_result['level']}")
-
-    # 레슨 완료
-    st.markdown("---")
+    idx = st.session_state.lesson_idx
     learned_count = sum(1 for v in st.session_state.lesson_learned.values() if v)
-    st.progress(learned_count / len(words), text=f"{learned_count}/{len(words)}개 완료")
 
-    if st.button("🎓 레슨 완료", type="primary"):
-        get("tracker").end_session(
-            st.session_state.lesson_session_id,
-            learned_count, None
+    # ── 상단 네비게이션 (항상 보임) ────────────────────────────────────────────
+    nav_l, nav_mid, nav_r = st.columns([1, 6, 1])
+    with nav_l:
+        if idx > 0:
+            if st.button("⬅️", use_container_width=True, help="이전 단어"):
+                st.session_state.pop(f"tts_bytes_{idx}", None)
+                st.session_state.pop(f"show_def_{idx}", None)
+                st.session_state.lesson_idx = idx - 1
+                st.rerun()
+    with nav_mid:
+        st.progress(idx / total, text=f"{idx + 1} / {total} 단어  |  외운 단어: {learned_count}개")
+    with nav_r:
+        if idx < total:
+            if st.button("➡️", use_container_width=True, help="다음 단어"):
+                st.session_state.pop(f"tts_bytes_{idx}", None)
+                st.session_state.pop(f"show_def_{idx}", None)
+                st.session_state.lesson_idx = min(idx + 1, total)
+                st.rerun()
+
+    # ── 완료 화면 ──────────────────────────────────────────────────────────────
+    if idx >= total:
+        st.success(f"🎉 모든 단어를 학습했습니다! (외운 단어: {learned_count}/{total}개)")
+        if st.button("🎓 레슨 완료 및 저장", type="primary", use_container_width=True):
+            get("tracker").end_session(
+                st.session_state.lesson_session_id, learned_count, None
+            )
+            new_achievements = get("gamification").check_achievements()
+            if new_achievements:
+                for ach in new_achievements:
+                    st.balloons()
+                    st.success(f"🏆 업적: {ach['icon']} {ach['name']}")
+            # 위젯 키 정리
+            for j in range(total):
+                st.session_state.pop(f"show_def_{j}", None)
+            for k in ["lesson_words", "lesson_session_id", "lesson_learned", "lesson_idx"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+        if st.button("🔁 처음부터 다시", use_container_width=True):
+            st.session_state.lesson_idx = 0
+            st.rerun()
+        return
+
+    word = words[idx]
+    defs = word.get("definitions", [])
+    simplified = word["simplified"]
+    traditional = word.get("traditional", simplified)
+    is_same = (simplified == traditional)
+    is_learned = st.session_state.lesson_learned.get(idx, False)
+
+    # ── 병음 + 진행 표시 ────────────────────────────────────────────────────────
+    st.markdown(
+        f"<div style='text-align:center; font-size:1rem; opacity:0.6; margin-bottom:4px;'>"
+        f"{word.get('pinyin', '')} &nbsp;|&nbsp; {idx+1}/{total}</div>",
+        unsafe_allow_html=True,
+    )
+
+    # ── 한자 카드: Streamlit 컬럼으로 나란히 표시 ─────────────────────────────
+    if is_same:
+        # 간체자 = 번체자
+        st.markdown(
+            f"<div class='word-card' style='text-align:center;'>"
+            f"<div style='font-size:4.5rem; font-weight:900; color:#fff; line-height:1;'>{simplified}</div>"
+            f"<div style='font-size:0.78rem; color:#86efac; margin-top:10px; font-weight:600;'>"
+            f"✅ 간체자 = 한자(漢字) 동일 — 중국·한국 모두 같은 형태</div></div>",
+            unsafe_allow_html=True,
         )
-        # 업적 체크
-        new_achievements = get("gamification").check_achievements()
-        if new_achievements:
-            for ach in new_achievements:
-                st.balloons()
-                st.success(f"🏆 업적 달성: {ach['icon']} {ach['name']} — {ach['description']}")
+    else:
+        # 간체자 ≠ 번체자: 두 컬럼으로 분리
+        col_s, col_arrow, col_t = st.columns([5, 1, 5])
+        with col_s:
+            st.markdown(
+                f"<div class='word-card' style='text-align:center; border-color:rgba(147,197,253,0.5);'>"
+                f"<div style='font-size:0.75rem; font-weight:700; color:#93c5fd; "
+                f"letter-spacing:1px; margin-bottom:8px;'>간체자 简体字</div>"
+                f"<div style='font-size:4rem; font-weight:900; color:#e0f2fe; line-height:1;'>{simplified}</div>"
+                f"<div style='font-size:0.65rem; margin-top:8px; color:rgba(147,197,253,0.7);'>중국 본토 표준</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        with col_arrow:
+            st.markdown(
+                "<div style='text-align:center; padding-top:45px; font-size:1.8rem; "
+                "color:rgba(255,255,255,0.5);'>⇔</div>",
+                unsafe_allow_html=True,
+            )
+        with col_t:
+            st.markdown(
+                f"<div class='word-card' style='text-align:center; border-color:rgba(251,191,36,0.5);'>"
+                f"<div style='font-size:0.75rem; font-weight:700; color:#fbbf24; "
+                f"letter-spacing:1px; margin-bottom:8px;'>한자(漢字) 繁體字</div>"
+                f"<div style='font-size:4rem; font-weight:900; color:#fef3c7; line-height:1;'>{traditional}</div>"
+                f"<div style='font-size:0.65rem; margin-top:8px; color:rgba(251,191,36,0.7);'>한국·대만·홍콩</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
-        st.success(f"레슨 완료! {learned_count}개 단어를 학습했습니다.")
-        del st.session_state.lesson_words
-        del st.session_state.lesson_session_id
-        st.session_state.lesson_learned = {}
-        st.rerun()
+    # ── 한자 설명 ──────────────────────────────────────────────────────────────
+    if not is_same:
+        char_pairs = [(s, t) for s, t in zip(simplified, traditional) if s != t]
+        diff_note = "  ·  변환된 글자: " + "  ".join(f"{s}→{t}" for s, t in char_pairs) if char_pairs else ""
+        st.info(
+            f"📖 **간체자(简体字)** — 1950년대 중국이 획수를 줄여 만든 현대 표준 문자.  \n"
+            f"**번체자(繁體字) = 한자(漢字)** — 수천 년 사용된 정자(正字). 한국·대만·홍콩 기준.{diff_note}"
+        )
+    else:
+        st.success("✅ 간체자와 한자(번체자)가 동일한 글자입니다. 중국·한국 모두 같은 형태를 사용합니다.")
+
+    # ── 뜻 보기 ────────────────────────────────────────────────────────────────
+    show_key = f"show_def_{idx}"
+    if show_key not in st.session_state:
+        st.session_state[show_key] = False
+
+    if not st.session_state[show_key]:
+        if st.button("💡 뜻 보기", use_container_width=True):
+            st.session_state[show_key] = True
+            st.rerun()
+    else:
+        meaning = " / ".join(defs) if defs else ""
+        st.markdown(
+            f"<div style='text-align:center; padding:14px; font-size:1.3rem; font-weight:700; "
+            f"color:#fde68a; background:rgba(255,255,255,0.12); border-radius:14px; "
+            f"border:1px solid rgba(255,255,255,0.2); margin:4px 0;'>{meaning}</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── TTS 발음 (base64 HTML audio — 가장 안정적) ────────────────────────────
+    tts_key = f"tts_bytes_{idx}"
+    if st.button("🔊 발음 듣기", use_container_width=True):
+        with st.spinner("음성 생성 중..."):
+            tts_data = get("speech").tts_bytes(simplified)
+        if tts_data:
+            st.session_state[tts_key] = tts_data
+        else:
+            st.warning(f"TTS 오류 — 병음: {word.get('pinyin', '')}")
+    if tts_key in st.session_state:
+        import base64
+        audio_b64 = base64.b64encode(st.session_state[tts_key]).decode()
+        st.markdown(
+            f'<audio controls style="width:100%;height:54px;margin-top:6px;border-radius:12px;"'
+            f' src="data:audio/mp3;base64,{audio_b64}"></audio>',
+            unsafe_allow_html=True,
+        )
+
+    # ── 외웠어요 / 레슨 중단 ──────────────────────────────────────────────────
+    st.markdown("")
+    c_check, c_end = st.columns([3, 1])
+    with c_check:
+        if not is_learned:
+            if st.button("✅ 외웠어요! (다음으로)", use_container_width=True, type="primary"):
+                st.session_state.lesson_learned[idx] = True
+                get("tracker").update_word_mastery(word, True)
+                xp_result = get("gamification").award_xp("word_learned")
+                if xp_result.get("leveled_up"):
+                    st.balloons()
+                    st.success(f"🎉 레벨업! Lv.{xp_result['level']}")
+                else:
+                    st.toast(f"+{xp_result['xp_gained']} XP")
+                st.session_state.pop(f"tts_bytes_{idx}", None)
+                st.session_state.pop(f"show_def_{idx}", None)
+                st.session_state.lesson_idx = min(idx + 1, total)
+                st.rerun()
+        else:
+            st.success("✅ 이 단어는 외웠어요!")
+    with c_end:
+        if st.button("🏁 중단", use_container_width=True, help="레슨 중단 및 저장"):
+            get("tracker").end_session(
+                st.session_state.lesson_session_id, learned_count, None
+            )
+            for j in range(total):
+                st.session_state.pop(f"show_def_{j}", None)
+                st.session_state.pop(f"tts_bytes_{j}", None)
+            for k in ["lesson_words", "lesson_session_id", "lesson_learned", "lesson_idx"]:
+                st.session_state.pop(k, None)
+            st.rerun()
 
 
 # ─── SRS 복습 ─────────────────────────────────────────────────────────────────
@@ -355,32 +775,124 @@ def show_conversation():
     st.header("💬 AI 회화 연습")
     st.caption("AI 튜터와 중국어로 대화하며 실력을 키우세요!")
 
+    tutor = get("ai_tutor")
+
+    # ── API 키 상태 표시 및 런타임 입력 ──────────────────────────────────────
+    if not tutor.has_api:
+        with st.expander("⚙️ Claude API 키 설정 (선택 — 없어도 기본 대화 가능)", expanded=True):
+            st.markdown("API 키를 설정하면 **진짜 AI 선생님**과 자유로운 대화가 가능합니다.")
+            api_input = st.text_input(
+                "ANTHROPIC_API_KEY",
+                type="password",
+                placeholder="sk-ant-...",
+                key="api_key_input",
+            )
+            if st.button("🔑 API 키 적용"):
+                if api_input.startswith("sk-ant-"):
+                    import anthropic as _anth
+                    try:
+                        tutor.client = _anth.Anthropic(api_key=api_input)
+                        tutor.client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=5,
+                            messages=[{"role": "user", "content": "hi"}],
+                        )
+                        st.success("✅ API 키 확인 완료! 이제 실제 AI와 대화합니다.")
+                        st.rerun()
+                    except Exception as e:
+                        tutor.client = None
+                        st.error(f"❌ 키 오류: {e}")
+                else:
+                    st.warning("올바른 Anthropic API 키 형식이 아닙니다 (sk-ant-로 시작해야 합니다).")
+        st.info("🤖 **기본 대화 모드** — 주요 패턴(인사·날씨·음식 등)으로 연습 중입니다. "
+                "API 키 없이도 자유롭게 입력해보세요!")
+    else:
+        st.success("🟢 Claude AI 연결됨 — 실시간 AI 선생님과 대화 중!")
+
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
         st.session_state.chat_corrections = []
         st.session_state.chat_session_id = get("tracker").start_session(0, "conversation")
         st.session_state.chat_turn = 0
 
+    # 음성 모드 토글
+    voice_mode = st.toggle("🎤 음성 모드", value=False, key="voice_mode_toggle",
+                           help="켜면 AI 응답을 자동 재생하고, 마이크로 입력할 수 있습니다.")
+
     # 대화 기록 표시
     for i, msg in enumerate(st.session_state.chat_history):
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
-            if msg["role"] == "assistant" and i < len(st.session_state.chat_corrections):
-                correction = st.session_state.chat_corrections[i // 2]
-                if correction.get("corrections"):
-                    with st.expander("📝 교정 사항"):
-                        for c in correction["corrections"]:
-                            st.markdown(f"""
+            if msg["role"] == "assistant":
+                # TTS 재생 버튼 (음성 모드면 최신 응답 자동 재생)
+                ai_text_for_tts = msg["content"].split("\n")[0]
+                is_latest = (i == len(st.session_state.chat_history) - 1)
+                tts_col, _ = st.columns([1, 5])
+                with tts_col:
+                    if st.button("🔊", key=f"tts_btn_{i}", help="음성 재생"):
+                        tts_data = get("speech").tts_bytes(ai_text_for_tts)
+                        if tts_data:
+                            st.audio(tts_data, format='audio/mp3', autoplay=True)
+                        else:
+                            st.caption("TTS를 사용할 수 없습니다.")
+                # 음성 모드 + 최신 응답 → 자동 재생
+                if voice_mode and is_latest and st.session_state.get("play_tts_latest", False):
+                    tts_data = get("speech").tts_bytes(ai_text_for_tts)
+                    if tts_data:
+                        st.audio(tts_data, format='audio/mp3', autoplay=True)
+                    st.session_state.play_tts_latest = False
+
+                if i < len(st.session_state.chat_corrections):
+                    correction = st.session_state.chat_corrections[i // 2]
+                    if correction.get("corrections"):
+                        with st.expander("📝 교정 사항"):
+                            for c in correction["corrections"]:
+                                st.markdown(f"""
 <div class="correction-box">
   ❌ <b>원문:</b> {c.get('original', '')} → ✅ <b>교정:</b> {c.get('corrected', '')}<br>
   💡 {c.get('explanation', '')}
 </div>""", unsafe_allow_html=True)
-                if correction.get("suggestions"):
-                    for s in correction["suggestions"]:
-                        st.markdown(f'<div class="suggestion-box">💡 {s}</div>', unsafe_allow_html=True)
+                    if correction.get("suggestions"):
+                        for s in correction["suggestions"]:
+                            st.markdown(f'<div class="suggestion-box">💡 {s}</div>', unsafe_allow_html=True)
 
-    # 사용자 입력
+    # ── 음성 입력 ────────────────────────────────────────────────────────────
+    if voice_mode:
+        st.markdown("---")
+        v_col, info_col = st.columns([1, 2])
+        with v_col:
+            try:
+                audio_value = st.audio_input("🎙️ 녹음하려면 클릭", key="voice_rec")
+                if audio_value is not None:
+                    raw_bytes = audio_value.read()
+                    with st.spinner("🎙️ 음성 인식 중..."):
+                        stt_result = get("speech").stt_from_bytes(raw_bytes, language="zh-CN")
+                    if stt_result:
+                        st.session_state.voice_transcribed = stt_result
+                    elif stt_result == "":
+                        st.warning("음성을 인식하지 못했습니다. 다시 시도해주세요.")
+                    else:
+                        st.error("음성 인식에 실패했습니다.")
+            except Exception as e:
+                st.caption(f"음성 입력 불가: {e}")
+
+        with info_col:
+            if "voice_transcribed" in st.session_state:
+                vtxt = st.session_state.voice_transcribed
+                st.info(f"🎙️ 인식 결과: **{vtxt}**")
+                if st.button("📤 전송하기", key="send_voice_btn", type="primary"):
+                    st.session_state.pending_voice_input = vtxt
+                    del st.session_state.voice_transcribed
+                    st.rerun()
+            else:
+                st.caption("중국어로 말하면 자동으로 텍스트로 변환됩니다.")
+
+    # 사용자 입력 (텍스트)
     user_input = st.chat_input("중국어 또는 한국어로 입력하세요...")
+
+    # 음성 입력 대기 처리
+    if not user_input and "pending_voice_input" in st.session_state:
+        user_input = st.session_state.pop("pending_voice_input")
 
     if user_input:
         st.session_state.chat_history.append({"role": "user", "content": user_input})
@@ -400,6 +912,8 @@ def show_conversation():
 
         st.session_state.chat_history.append({"role": "assistant", "content": display})
         st.session_state.chat_corrections.append(response)
+        # 음성 모드: 최신 응답 자동 재생 플래그
+        st.session_state.play_tts_latest = True
 
         # 저장
         st.session_state.chat_turn += 1
@@ -448,14 +962,14 @@ def show_quiz():
     if "quiz_data" not in st.session_state:
         c1, c2, c3 = st.columns(3)
         with c1:
-            count = st.slider("문제 수", 5, 20, 10)
+            count = st.slider("문제 수", 10, 200, 100)
         with c2:
             lesson_start = st.slider("레슨 시작", 0, max(0, len(vocab) // 10 - 1), 0)
         with c3:
             st.write("")  # spacer
 
         if st.button("🎯 퀴즈 시작", type="primary"):
-            word_slice = vocab[lesson_start * 10: lesson_start * 10 + 50]
+            word_slice = vocab[lesson_start * 10: lesson_start * 10 + 500]
             if not word_slice:
                 word_slice = vocab
             recent_scores = []

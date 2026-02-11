@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+*.env.local
+venv/
+.venv/
+
+# App runtime
+database/*.db
+audio_cache/
+*.mp3
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Claude local state
+.claude/

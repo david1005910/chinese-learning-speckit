@@ -381,6 +381,12 @@ def get(key):
 _PAGES = ["🏠 홈", "📚 단어 학습", "🔄 간격 복습 (SRS)", "💬 AI 회화", "📝 퀴즈", "📊 진도 확인", "🏆 업적"]
 
 
+def nav_to(page: str):
+    """페이지 이동 헬퍼: 세션 키를 직접 설정하고 rerun."""
+    st.session_state["sidebar_sel"] = page
+    st.rerun()
+
+
 def render_sidebar():
     with st.sidebar:
         st.title("🇨🇳 중국어 학습")
@@ -407,22 +413,18 @@ def render_sidebar():
 
         st.markdown("---")
 
-        # 현재 페이지를 세션 상태로 유지 — 버튼 클릭 후 rerun 해도 페이지가 바뀌지 않도록
-        current = st.session_state.get("current_page", "🏠 홈")
-        try:
-            default_idx = _PAGES.index(current)
-        except ValueError:
-            default_idx = 0
+        # key="sidebar_sel" 로 세션 상태와 직접 연결.
+        # nav_to()에서 st.session_state["sidebar_sel"] = page 로 바꾸면
+        # 다음 rerun 때 selectbox 가 자동으로 그 값을 보여줌.
+        if "sidebar_sel" not in st.session_state:
+            st.session_state["sidebar_sel"] = "🏠 홈"
 
         menu = st.selectbox(
             "메뉴",
             _PAGES,
-            index=default_idx,
             label_visibility="collapsed",
-            key="sidebar_menu_select",
+            key="sidebar_sel",
         )
-        # 사용자가 직접 사이드바에서 메뉴 변경 → 세션 상태 동기화
-        st.session_state.current_page = menu
         return menu
 
 
@@ -455,17 +457,14 @@ def show_home():
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button("📚 단어 학습 시작", use_container_width=True, type="primary"):
-            st.session_state.current_page = "📚 단어 학습"
-            st.rerun()
+            nav_to("📚 단어 학습")
     with c2:
         due = len(get("srs").get_due_cards(50))
         if st.button(f"🔄 복습하기 ({due}개 대기)", use_container_width=True):
-            st.session_state.current_page = "🔄 간격 복습 (SRS)"
-            st.rerun()
+            nav_to("🔄 간격 복습 (SRS)")
     with c3:
         if st.button("💬 AI와 대화하기", use_container_width=True):
-            st.session_state.current_page = "💬 AI 회화"
-            st.rerun()
+            nav_to("💬 AI 회화")
 
     # 학습 곡선
     curve = get("tracker").get_learning_curve(30)

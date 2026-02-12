@@ -40,15 +40,19 @@ class SpeechHandler:
         os.makedirs(self.audio_dir, exist_ok=True)
         self.tts_enabled = HAS_EDGE_TTS or (gTTS is not None)
 
-    def tts_bytes(self, text: str, lang: str = 'zh-cn', slow: bool = False) -> Optional[bytes]:
-        """텍스트를 MP3 바이트로 변환 (남성 음성 우선)"""
+    def tts_bytes(self, text: str, lang: str = 'zh-cn', slow: bool = False, rate: str = "") -> Optional[bytes]:
+        """텍스트를 MP3 바이트로 변환 (남성 음성 우선)
+
+        Args:
+            rate: edge-tts 속도 조절 (예: "-25%" → 0.75x)
+        """
         if not self.tts_enabled or not text.strip():
             return None
 
         # edge-tts 남성 음성 우선
         if HAS_EDGE_TTS:
             try:
-                data = self._edge_tts_bytes(text)
+                data = self._edge_tts_bytes(text, rate=rate)
                 if data and len(data) > 0:
                     return data
             except Exception as e:
@@ -65,8 +69,12 @@ class SpeechHandler:
                 print(f"gTTS error: {e}", flush=True)
         return None
 
-    def _edge_tts_bytes(self, text: str) -> bytes:
-        """edge-tts로 남성 음성 MP3 바이트 생성 (subprocess로 완전 격리)"""
+    def _edge_tts_bytes(self, text: str, rate: str = "") -> bytes:
+        """edge-tts로 남성 음성 MP3 바이트 생성 (subprocess로 완전 격리)
+
+        Args:
+            rate: 속도 조절 (예: "-25%" → 0.75x, "+0%" → 1x)
+        """
         import subprocess
         import tempfile
         import sys
@@ -75,11 +83,14 @@ class SpeechHandler:
             tmp_path = tmp.name
 
         try:
+            cmd = [sys.executable, "-m", "edge_tts",
+                   "--voice", EDGE_VOICE_MALE_ZH,
+                   "--text", text,
+                   "--write-media", tmp_path]
+            if rate:
+                cmd.extend(["--rate", rate])
             result = subprocess.run(
-                [sys.executable, "-m", "edge_tts",
-                 "--voice", EDGE_VOICE_MALE_ZH,
-                 "--text", text,
-                 "--write-media", tmp_path],
+                cmd,
                 capture_output=True, text=True, timeout=15,
             )
             if result.returncode != 0:

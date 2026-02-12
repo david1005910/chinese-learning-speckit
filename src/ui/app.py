@@ -869,7 +869,7 @@ def show_pronunciation():
             )
             ma_tts_key = f"ma_tts_data_{char}"
             if st.button(f"🔊 {char}", key=f"ma_tts_{char}", use_container_width=True):
-                tts_data = get("speech").tts_bytes(char)
+                tts_data = get("speech").tts_bytes(char, rate="-25%")
                 if tts_data:
                     st.session_state[ma_tts_key] = tts_data
             if ma_tts_key in st.session_state:
@@ -917,7 +917,7 @@ def show_pronunciation():
         # TTS 재생
         pron_tts_key = "pron_tts_word_data"
         if st.button("🔊 발음 듣기", key="pron_tts_word", use_container_width=True):
-            tts_data = get("speech").tts_bytes(simplified)
+            tts_data = get("speech").tts_bytes(simplified, rate="-25%")
             if tts_data:
                 st.session_state[pron_tts_key] = tts_data
         if pron_tts_key in st.session_state:

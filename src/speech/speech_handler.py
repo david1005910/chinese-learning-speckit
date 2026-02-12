@@ -1,11 +1,19 @@
 """
 음성 합성/인식 모듈 (TTS / STT)
-Google Text-to-Speech + SpeechRecognition 사용
+edge-tts (남성 음성) 우선, gTTS 폴백
 """
 
+import asyncio
 import io
 import os
 from typing import Optional
+
+try:
+    import edge_tts
+    HAS_EDGE_TTS = True
+except ImportError:
+    HAS_EDGE_TTS = False
+
 try:
     from gtts import gTTS
 except ImportError:
@@ -16,10 +24,13 @@ try:
 except ImportError:
     sr = None
 
+# 남성 중국어 음성 (Microsoft Edge Neural TTS)
+EDGE_VOICE_MALE_ZH = "zh-CN-YunxiNeural"
+
 
 class SpeechHandler:
     """텍스트 음성 변환 핸들러"""
-    
+
     def __init__(self, audio_dir: str = 'audio_cache'):
         """
         Args:
@@ -27,20 +38,54 @@ class SpeechHandler:
         """
         self.audio_dir = audio_dir
         os.makedirs(self.audio_dir, exist_ok=True)
-        self.tts_enabled = gTTS is not None
-    
+        self.tts_enabled = HAS_EDGE_TTS or (gTTS is not None)
+
     def tts_bytes(self, text: str, lang: str = 'zh-cn', slow: bool = False) -> Optional[bytes]:
-        """텍스트를 MP3 바이트로 변환 (st.audio()에 직접 전달용)"""
+        """텍스트를 MP3 바이트로 변환 (남성 음성 우선)"""
         if not self.tts_enabled or not text.strip():
             return None
-        try:
-            tts = gTTS(text=text, lang=lang, slow=slow)
+
+        # edge-tts 남성 음성 우선
+        if HAS_EDGE_TTS:
+            try:
+                return self._edge_tts_bytes(text)
+            except Exception as e:
+                print(f"edge-tts error, falling back to gTTS: {e}")
+
+        # gTTS 폴백
+        if gTTS is not None:
+            try:
+                tts = gTTS(text=text, lang=lang, slow=slow)
+                buf = io.BytesIO()
+                tts.write_to_fp(buf)
+                return buf.getvalue()
+            except Exception as e:
+                print(f"gTTS error: {e}")
+        return None
+
+    def _edge_tts_bytes(self, text: str) -> bytes:
+        """edge-tts로 남성 음성 MP3 바이트 생성"""
+        async def _generate():
+            communicate = edge_tts.Communicate(text, EDGE_VOICE_MALE_ZH)
             buf = io.BytesIO()
-            tts.write_to_fp(buf)
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    buf.write(chunk["data"])
             return buf.getvalue()
-        except Exception as e:
-            print(f"TTS bytes error: {e}")
-            return None
+
+        # 이미 실행 중인 이벤트 루프가 있으면 새 루프 사용
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(asyncio.run, _generate()).result()
+            return result
+        else:
+            return asyncio.run(_generate())
 
     def stt_from_bytes(self, audio_bytes: bytes, language: str = "zh-CN") -> Optional[str]:
         """

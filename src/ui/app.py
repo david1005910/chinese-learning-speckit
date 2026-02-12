@@ -765,7 +765,7 @@ def show_vocabulary_lesson():
     with col_tts_btn:
         if st.button("🔊 발음 듣기", key=f"tts_btn_{idx}", use_container_width=True):
             try:
-                tts_data = get("speech").tts_bytes(simplified, rate="-25%")
+                tts_data = get("speech").tts_bytes(simplified)
                 if tts_data:
                     st.session_state[tts_key] = tts_data
                 else:
@@ -869,7 +869,7 @@ def show_pronunciation():
             )
             ma_tts_key = f"ma_tts_data_{char}"
             if st.button(f"🔊 {char}", key=f"ma_tts_{char}", use_container_width=True):
-                tts_data = get("speech").tts_bytes(char, rate="-25%")
+                tts_data = get("speech").tts_bytes(char)
                 if tts_data:
                     st.session_state[ma_tts_key] = tts_data
             if ma_tts_key in st.session_state:
@@ -917,7 +917,7 @@ def show_pronunciation():
         # TTS 재생
         pron_tts_key = "pron_tts_word_data"
         if st.button("🔊 발음 듣기", key="pron_tts_word", use_container_width=True):
-            tts_data = get("speech").tts_bytes(simplified, rate="-25%")
+            tts_data = get("speech").tts_bytes(simplified)
             if tts_data:
                 st.session_state[pron_tts_key] = tts_data
         if pron_tts_key in st.session_state:
@@ -1140,7 +1140,7 @@ def show_conversation():
                 tts_col, _ = st.columns([1, 5])
                 with tts_col:
                     if st.button("🔊", key=f"tts_btn_{i}", help="음성 재생"):
-                        tts_data = get("speech").tts_bytes(ai_text_for_tts, rate="-25%")
+                        tts_data = get("speech").tts_bytes(ai_text_for_tts)
                         if tts_data:
                             st.session_state[chat_tts_key] = tts_data
                         else:
@@ -1149,7 +1149,7 @@ def show_conversation():
                     st.audio(st.session_state[chat_tts_key], format='audio/mp3')
                 # 음성 모드 + 최신 응답 → 자동 재생
                 if voice_mode and is_latest and st.session_state.get("play_tts_latest", False):
-                    tts_data = get("speech").tts_bytes(ai_text_for_tts, rate="-25%")
+                    tts_data = get("speech").tts_bytes(ai_text_for_tts)
                     if tts_data:
                         st.audio(tts_data, format='audio/mp3', autoplay=True)
                     st.session_state.play_tts_latest = False

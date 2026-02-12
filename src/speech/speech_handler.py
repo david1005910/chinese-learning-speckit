@@ -40,7 +40,7 @@ class SpeechHandler:
         os.makedirs(self.audio_dir, exist_ok=True)
         self.tts_enabled = HAS_EDGE_TTS or (gTTS is not None)
 
-    def tts_bytes(self, text: str, lang: str = 'zh-cn', slow: bool = False, rate: str = "") -> Optional[bytes]:
+    def tts_bytes(self, text: str, lang: str = 'zh-cn', slow: bool = False, rate: str = "-25%") -> Optional[bytes]:
         """텍스트를 MP3 바이트로 변환 (남성 음성 우선)
 
         Args:

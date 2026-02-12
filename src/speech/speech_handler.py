@@ -48,9 +48,11 @@ class SpeechHandler:
         # edge-tts 남성 음성 우선
         if HAS_EDGE_TTS:
             try:
-                return self._edge_tts_bytes(text)
+                data = self._edge_tts_bytes(text)
+                if data and len(data) > 0:
+                    return data
             except Exception as e:
-                print(f"edge-tts error, falling back to gTTS: {e}")
+                print(f"edge-tts error, falling back to gTTS: {e}", flush=True)
 
         # gTTS 폴백
         if gTTS is not None:
@@ -60,32 +62,38 @@ class SpeechHandler:
                 tts.write_to_fp(buf)
                 return buf.getvalue()
             except Exception as e:
-                print(f"gTTS error: {e}")
+                print(f"gTTS error: {e}", flush=True)
         return None
 
     def _edge_tts_bytes(self, text: str) -> bytes:
-        """edge-tts로 남성 음성 MP3 바이트 생성"""
-        async def _generate():
-            communicate = edge_tts.Communicate(text, EDGE_VOICE_MALE_ZH)
-            buf = io.BytesIO()
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    buf.write(chunk["data"])
-            return buf.getvalue()
+        """edge-tts로 남성 음성 MP3 바이트 생성 (subprocess로 완전 격리)"""
+        import subprocess
+        import tempfile
+        import sys
 
-        # 이미 실행 중인 이벤트 루프가 있으면 새 루프 사용
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+            tmp_path = tmp.name
+
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                result = pool.submit(asyncio.run, _generate()).result()
-            return result
-        else:
-            return asyncio.run(_generate())
+            result = subprocess.run(
+                [sys.executable, "-m", "edge_tts",
+                 "--voice", EDGE_VOICE_MALE_ZH,
+                 "--text", text,
+                 "--write-media", tmp_path],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"edge-tts CLI failed: {result.stderr}")
+            with open(tmp_path, "rb") as f:
+                data = f.read()
+            if not data:
+                raise RuntimeError("edge-tts produced empty file")
+            return data
+        finally:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
     def stt_from_bytes(self, audio_bytes: bytes, language: str = "zh-CN") -> Optional[str]:
         """

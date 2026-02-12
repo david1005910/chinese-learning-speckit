@@ -363,8 +363,10 @@ section[data-testid="stSidebar"] [role="option"] * {
 
 
 # ─── 초기화 ────────────────────────────────────────────────────────────────────
+_CACHE_VERSION = 2  # bump to invalidate st.cache_resource
+
 @st.cache_resource
-def init_resources():
+def init_resources(_v=_CACHE_VERSION):
     parser = ChineseDataParser()
     tracker = ProgressTracker('database/learning_progress.db')
     gamification = GamificationSystem(tracker)
@@ -746,22 +748,18 @@ def show_vocabulary_lesson():
     tts_key = f"tts_bytes_{idx}"
     col_tts_btn, col_tts_player = st.columns([1, 3])
     with col_tts_btn:
-        if st.button("🔊 발음 듣기", use_container_width=True):
-            with st.spinner("음성 생성 중..."):
+        if st.button("🔊 발음 듣기", key=f"tts_btn_{idx}", use_container_width=True):
+            try:
                 tts_data = get("speech").tts_bytes(simplified)
-            if tts_data:
-                st.session_state[tts_key] = tts_data
-            else:
-                st.warning(f"TTS 오류 — 병음: {word.get('pinyin', '')}")
+                if tts_data:
+                    st.session_state[tts_key] = tts_data
+                else:
+                    st.warning(f"TTS 오류 — 병음: {word.get('pinyin', '')}")
+            except Exception as e:
+                st.error(f"TTS 예외: {e}")
     with col_tts_player:
         if tts_key in st.session_state:
-            import base64
-            audio_b64 = base64.b64encode(st.session_state[tts_key]).decode()
-            st.markdown(
-                f'<audio controls style="width:100%;height:54px;border-radius:12px;"'
-                f' src="data:audio/mp3;base64,{audio_b64}"></audio>',
-                unsafe_allow_html=True,
-            )
+            st.audio(st.session_state[tts_key], format="audio/mp3")
 
     # ── 외웠어요 / 레슨 중단 ──────────────────────────────────────────────────
     st.markdown("")
@@ -854,15 +852,13 @@ def show_pronunciation():
                 f"</div>",
                 unsafe_allow_html=True,
             )
+            ma_tts_key = f"ma_tts_data_{char}"
             if st.button(f"🔊 {char}", key=f"ma_tts_{char}", use_container_width=True):
                 tts_data = get("speech").tts_bytes(char)
                 if tts_data:
-                    import base64
-                    b64 = base64.b64encode(tts_data).decode()
-                    st.markdown(
-                        f'<audio autoplay src="data:audio/mp3;base64,{b64}"></audio>',
-                        unsafe_allow_html=True,
-                    )
+                    st.session_state[ma_tts_key] = tts_data
+            if ma_tts_key in st.session_state:
+                st.audio(st.session_state[ma_tts_key], format="audio/mp3")
 
     st.markdown("---")
 
@@ -904,16 +900,13 @@ def show_pronunciation():
             st.image(diagram_png, use_container_width=True)
 
         # TTS 재생
+        pron_tts_key = "pron_tts_word_data"
         if st.button("🔊 발음 듣기", key="pron_tts_word", use_container_width=True):
             tts_data = get("speech").tts_bytes(simplified)
             if tts_data:
-                import base64
-                b64 = base64.b64encode(tts_data).decode()
-                st.markdown(
-                    f'<audio controls autoplay style="width:100%;height:54px;border-radius:12px;" '
-                    f'src="data:audio/mp3;base64,{b64}"></audio>',
-                    unsafe_allow_html=True,
-                )
+                st.session_state[pron_tts_key] = tts_data
+        if pron_tts_key in st.session_state:
+            st.audio(st.session_state[pron_tts_key], format="audio/mp3")
 
         # 뜻
         defs = word.get("definitions", [])
@@ -1128,14 +1121,17 @@ def show_conversation():
                 # TTS 재생 버튼 (음성 모드면 최신 응답 자동 재생)
                 ai_text_for_tts = msg["content"].split("\n")[0]
                 is_latest = (i == len(st.session_state.chat_history) - 1)
+                chat_tts_key = f"chat_tts_data_{i}"
                 tts_col, _ = st.columns([1, 5])
                 with tts_col:
                     if st.button("🔊", key=f"tts_btn_{i}", help="음성 재생"):
                         tts_data = get("speech").tts_bytes(ai_text_for_tts)
                         if tts_data:
-                            st.audio(tts_data, format='audio/mp3', autoplay=True)
+                            st.session_state[chat_tts_key] = tts_data
                         else:
                             st.caption("TTS를 사용할 수 없습니다.")
+                if chat_tts_key in st.session_state:
+                    st.audio(st.session_state[chat_tts_key], format='audio/mp3')
                 # 음성 모드 + 최신 응답 → 자동 재생
                 if voice_mode and is_latest and st.session_state.get("play_tts_latest", False):
                     tts_data = get("speech").tts_bytes(ai_text_for_tts)

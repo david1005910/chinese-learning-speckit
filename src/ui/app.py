@@ -223,6 +223,21 @@ section[data-testid="stSidebar"] [role="option"],
 section[data-testid="stSidebar"] [role="option"] * {
     color: #fff !important; -webkit-text-fill-color: #fff !important;
 }
+/* 전역 popover / listbox (사이드바 밖 렌더링 대비) */
+ul[role="listbox"],
+ul[role="listbox"] li,
+ul[role="listbox"] li *,
+div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] ul li,
+div[data-baseweb="popover"] ul li * {
+    background: rgba(25, 8, 55, 0.97) !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+}
+ul[role="listbox"] li[aria-selected="true"],
+ul[role="listbox"] li:hover {
+    background: rgba(255,255,255,0.15) !important;
+}
 
 /* ── chat input ── */
 [data-testid="stChatInput"] > div,

@@ -10,8 +10,17 @@ try:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.font_manager as fm
     import numpy as np
     HAS_MPL = True
+    # 한글 + 중국어 폰트 설정 (macOS 우선)
+    _KR_FONTS = ["Apple SD Gothic Neo", "AppleGothic", "Nanum Gothic",
+                 "Malgun Gothic", "NanumGothic", "sans-serif"]
+    for _fname in _KR_FONTS:
+        if any(_fname == f.name for f in fm.fontManager.ttflist):
+            matplotlib.rcParams["font.family"] = _fname
+            break
+    matplotlib.rcParams["axes.unicode_minus"] = False
 except ImportError:
     HAS_MPL = False
 
@@ -29,7 +38,7 @@ TONE_NAMES_KR = {
     2: "2성 (양평)",
     3: "3성 (상성)",
     4: "4성 (거성)",
-    5: "경성 (轻声)",
+    5: "경성 (경성)",
 }
 
 # 성조 피치 곡선 데이터 (5단계 피치: 1=낮음, 5=높음)
@@ -113,9 +122,10 @@ def render_word_tone_diagram(syllables: List[Dict]) -> bytes:
         offset = i * 1.5
         ax.plot(x_smooth + offset, y_smooth, color=TONE_COLORS.get(tone, "#9CA3AF"),
                 linewidth=4, solid_capstyle="round")
-        # 음절 라벨
+        # 음절 라벨 (병음 특수 문자용 DejaVu Sans 폴백)
         ax.text(offset + 0.5, -0.3, syl["syllable"],
-                ha="center", va="top", fontsize=14, color="white", fontweight="bold")
+                ha="center", va="top", fontsize=14, color="white", fontweight="bold",
+                fontfamily="DejaVu Sans")
 
     ax.set_ylim(-1, 6)
     ax.set_xlim(-0.3, n * 1.5 - 0.2)

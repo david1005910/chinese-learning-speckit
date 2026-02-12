@@ -362,7 +362,7 @@ class EvalAgent:
                 questions.append({
                     "id": f"q_{i}",
                     "type": "fill_blank",
-                    "question": f"'{meaning}'를 중국어로? (병음: {word.get('pinyin', '')})",
+                    "question": f"'{meaning}'를 중국어로?",
                     "options": [],
                     "answer": word["simplified"],
                     "explanation": f"{meaning} = {word['simplified']}",

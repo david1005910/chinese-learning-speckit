@@ -88,7 +88,7 @@ class SpeechHandler:
                    "--text", text,
                    "--write-media", tmp_path]
             if rate:
-                cmd.extend(["--rate", rate])
+                cmd.append(f"--rate={rate}")
             result = subprocess.run(
                 cmd,
                 capture_output=True, text=True, timeout=15,

@@ -1309,7 +1309,7 @@ def show_quiz():
             else:
                 options = q.get("options", [])
                 if options:
-                    answer = st.radio(f"선택 #{i+1}", options, key=f"q_{i}", label_visibility="collapsed")
+                    answer = st.radio(f"선택 #{i+1}", options, key=f"q_{i}", index=None, label_visibility="collapsed")
                 else:
                     answer = st.text_input(f"답 입력 #{i+1}", key=f"q_{i}", label_visibility="collapsed")
 

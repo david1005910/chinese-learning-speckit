@@ -737,23 +737,26 @@ def show_vocabulary_lesson():
             unsafe_allow_html=True,
         )
 
-    # ── TTS 발음 (base64 HTML audio — 가장 안정적) ────────────────────────────
+    # ── TTS 발음 (버튼 + 오디오 플레이어 한 줄) ─────────────────────────────────
     tts_key = f"tts_bytes_{idx}"
-    if st.button("🔊 발음 듣기", use_container_width=True):
-        with st.spinner("음성 생성 중..."):
-            tts_data = get("speech").tts_bytes(simplified)
-        if tts_data:
-            st.session_state[tts_key] = tts_data
-        else:
-            st.warning(f"TTS 오류 — 병음: {word.get('pinyin', '')}")
-    if tts_key in st.session_state:
-        import base64
-        audio_b64 = base64.b64encode(st.session_state[tts_key]).decode()
-        st.markdown(
-            f'<audio controls style="width:100%;height:54px;margin-top:6px;border-radius:12px;"'
-            f' src="data:audio/mp3;base64,{audio_b64}"></audio>',
-            unsafe_allow_html=True,
-        )
+    col_tts_btn, col_tts_player = st.columns([1, 3])
+    with col_tts_btn:
+        if st.button("🔊 발음 듣기", use_container_width=True):
+            with st.spinner("음성 생성 중..."):
+                tts_data = get("speech").tts_bytes(simplified)
+            if tts_data:
+                st.session_state[tts_key] = tts_data
+            else:
+                st.warning(f"TTS 오류 — 병음: {word.get('pinyin', '')}")
+    with col_tts_player:
+        if tts_key in st.session_state:
+            import base64
+            audio_b64 = base64.b64encode(st.session_state[tts_key]).decode()
+            st.markdown(
+                f'<audio controls style="width:100%;height:54px;border-radius:12px;"'
+                f' src="data:audio/mp3;base64,{audio_b64}"></audio>',
+                unsafe_allow_html=True,
+            )
 
     # ── 외웠어요 / 레슨 중단 ──────────────────────────────────────────────────
     st.markdown("")

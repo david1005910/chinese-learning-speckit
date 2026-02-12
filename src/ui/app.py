@@ -408,6 +408,11 @@ def nav_to(page: str):
 
 def render_sidebar():
     with st.sidebar:
+        st.markdown(
+            "<div style='font-size:0.65rem; opacity:0.5; margin-bottom:2px;'>"
+            "&copy; David HS Kim</div>",
+            unsafe_allow_html=True,
+        )
         st.title("🇨🇳 중국어 학습")
         st.markdown("---")
 

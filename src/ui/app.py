@@ -376,6 +376,68 @@ ul[role="listbox"] li:hover {
 </style>
 """, unsafe_allow_html=True)
 
+# ─── 영어 에러 메시지 → 한국어 자동 치환 (iframe JS로 parent DOM 접근) ────────
+import streamlit.components.v1 as components
+components.html("""
+<script>
+(function() {
+    var doc = window.parent.document;
+    var translations = {
+        "An error has occurred, please try again.": "오류가 발생했습니다. 다시 시도해주세요.",
+        "An error has occurred": "오류가 발생했습니다",
+        "An error occurred while recording.": "녹음 중 오류가 발생했습니다.",
+        "Could not start recording.": "녹음을 시작할 수 없습니다.",
+        "Permission denied": "권한이 거부되었습니다",
+        "Microphone access denied": "마이크 접근이 거부되었습니다",
+        "No recording yet": "아직 녹음이 없습니다",
+        "Press to record": "녹음하려면 클릭",
+        "Recording...": "녹음 중..."
+    };
+    function replaceText(node) {
+        if (node.nodeType === 3) {
+            for (var en in translations) {
+                if (node.textContent.indexOf(en) !== -1) {
+                    node.textContent = node.textContent.replace(en, translations[en]);
+                }
+            }
+        } else {
+            for (var i = 0; i < node.childNodes.length; i++) {
+                replaceText(node.childNodes[i]);
+            }
+        }
+    }
+    function scanIframes() {
+        var iframes = doc.querySelectorAll('iframe');
+        iframes.forEach(function(iframe) {
+            try {
+                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                replaceText(iframeDoc.body);
+                new MutationObserver(function(muts) {
+                    muts.forEach(function(m) {
+                        m.addedNodes.forEach(replaceText);
+                        if (m.type === 'characterData') replaceText(m.target);
+                    });
+                }).observe(iframeDoc.body, {childList: true, subtree: true, characterData: true});
+            } catch(e) {}
+        });
+    }
+    replaceText(doc.body);
+    var obs = new MutationObserver(function(muts) {
+        muts.forEach(function(m) {
+            m.addedNodes.forEach(function(n) {
+                replaceText(n);
+                if (n.tagName === 'IFRAME') {
+                    setTimeout(scanIframes, 200);
+                }
+            });
+            if (m.type === 'characterData') replaceText(m.target);
+        });
+    });
+    obs.observe(doc.body, {childList: true, subtree: true, characterData: true});
+    setInterval(scanIframes, 2000);
+})();
+</script>
+""", height=0)
 
 # ─── 초기화 ────────────────────────────────────────────────────────────────────
 _CACHE_VERSION = 2  # bump to invalidate st.cache_resource

@@ -52,10 +52,17 @@ _TONE_CURVES = {
 }
 
 
+_all_tones_cache: bytes = b""
+
+
 def render_all_tones_chart() -> bytes:
     """
     4성(+경성) 전체 개요 차트를 PNG 바이트로 반환.
+    결과를 모듈 레벨에서 캐시하여 한 번만 렌더링합니다.
     """
+    global _all_tones_cache
+    if _all_tones_cache:
+        return _all_tones_cache
     if not HAS_MPL:
         return b""
 
@@ -93,7 +100,11 @@ def render_all_tones_chart() -> bytes:
     fig.savefig(buf, format="png", dpi=120, transparent=True, bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
-    return buf.getvalue()
+    _all_tones_cache = buf.getvalue()
+    return _all_tones_cache
+
+
+_word_tone_cache: dict = {}
 
 
 def render_word_tone_diagram(syllables: List[Dict]) -> bytes:
@@ -108,6 +119,10 @@ def render_word_tone_diagram(syllables: List[Dict]) -> bytes:
     """
     if not HAS_MPL or not syllables:
         return b""
+
+    cache_key = tuple((s["syllable"], s["tone_number"]) for s in syllables)
+    if cache_key in _word_tone_cache:
+        return _word_tone_cache[cache_key]
 
     n = len(syllables)
     fig, ax = plt.subplots(figsize=(max(3, n * 2.2), 3), facecolor="none")
@@ -140,7 +155,9 @@ def render_word_tone_diagram(syllables: List[Dict]) -> bytes:
     fig.savefig(buf, format="png", dpi=120, transparent=True, bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
-    return buf.getvalue()
+    result = buf.getvalue()
+    _word_tone_cache[cache_key] = result
+    return result
 
 
 def tone_indicator_html(tone_number: int) -> str:

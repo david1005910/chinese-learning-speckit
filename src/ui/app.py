@@ -7,6 +7,8 @@ import streamlit as st
 import sys
 import os
 import json
+import pandas as pd
+import plotly.express as px
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
@@ -475,6 +477,21 @@ def get(key):
     return res[key]
 
 
+@st.cache_data(ttl=5)
+def _cached_statistics():
+    return get("tracker").get_statistics()
+
+
+@st.cache_data(ttl=5)
+def _cached_level_info():
+    return get("gamification").get_level_info()
+
+
+@st.cache_data(ttl=30)
+def _cached_learning_curve(days: int):
+    return get("tracker").get_learning_curve(days)
+
+
 # ─── 사이드바 ─────────────────────────────────────────────────────────────────
 _PAGES = ["🏠 홈", "📚 단어 학습", "🎙️ 발음 연습", "🔄 간격 복습 (SRS)", "💬 AI 회화", "📝 퀴즈", "📊 진도 확인", "🏆 업적"]
 
@@ -496,7 +513,7 @@ def render_sidebar():
         st.markdown("---")
 
         # 레벨 & XP 표시
-        level_info = get("gamification").get_level_info()
+        level_info = _cached_level_info()
         level = level_info["level"]
         xp_cur = level_info["current_in_level"]
         xp_tot = level_info["xp_for_next_level"]
@@ -541,8 +558,8 @@ def show_home():
     if not streak_result.get("already_done"):
         st.success(f"🔥 오늘도 학습 시작! 현재 연속: {streak_result.get('current_streak', 1)}일")
 
-    stats = get("tracker").get_statistics()
-    level_info = get("gamification").get_level_info()
+    stats = _cached_statistics()
+    level_info = _cached_level_info()
 
     # 주요 지표
     c1, c2, c3, c4 = st.columns(4)
@@ -570,10 +587,8 @@ def show_home():
             nav_to("💬 AI 회화")
 
     # 학습 곡선
-    curve = get("tracker").get_learning_curve(30)
+    curve = _cached_learning_curve(30)
     if curve:
-        import pandas as pd
-        import plotly.express as px
         df = pd.DataFrame(curve, columns=["날짜", "세션수", "평균점수"])
         df["평균점수"] = df["평균점수"].fillna(0)
         fig = px.area(df, x="날짜", y="평균점수", title="최근 30일 학습 추이", markers=True,
@@ -1330,7 +1345,7 @@ def show_quiz():
     st.header("📝 퀴즈")
 
     vocab = get("vocabulary")
-    stats = get("tracker").get_statistics()
+    stats = _cached_statistics()
 
     # 퀴즈 설정
     if "quiz_data" not in st.session_state:
@@ -1434,8 +1449,8 @@ def show_quiz():
 def show_progress():
     st.header("📊 학습 진도")
 
-    stats = get("tracker").get_statistics()
-    level_info = get("gamification").get_level_info()
+    stats = _cached_statistics()
+    level_info = _cached_level_info()
 
     # 주요 지표
     c1, c2, c3, c4 = st.columns(4)
@@ -1458,10 +1473,8 @@ def show_progress():
     col_chart, col_review = st.columns([2, 1])
 
     with col_chart:
-        curve = get("tracker").get_learning_curve(30)
+        curve = _cached_learning_curve(30)
         if curve:
-            import pandas as pd
-            import plotly.express as px
             df = pd.DataFrame(curve, columns=["날짜", "세션수", "평균점수"])
             df["평균점수"] = df["평균점수"].fillna(0)
             fig = px.bar(df, x="날짜", y="세션수", title="30일 학습 세션",

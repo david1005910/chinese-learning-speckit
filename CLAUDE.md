@@ -51,7 +51,7 @@ mypy src/
 
 ## Architecture
 
-This is a Streamlit-based AI Chinese learning application targeting HSK 1-2 learners.
+Streamlit-based AI Chinese learning app targeting HSK 1-2 learners. **UI is in Korean**, content is Chinese with Korean translations.
 
 ### Module Structure
 
@@ -68,9 +68,10 @@ src/
 │   ├── spaced_repetition.py # SM-2 algorithm implementation for review scheduling
 │   └── gamification.py      # XP system, level calculation (1.5x scaling), achievements
 ├── speech/
-│   └── speech_handler.py    # Google TTS audio generation with file cache
+│   └── speech_handler.py    # TTS: edge-tts (zh-CN-YunxiNeural male voice) with gTTS fallback
 └── ui/
-    └── app.py               # Streamlit multi-page app (Home, Vocab, Chat, Quiz, Progress)
+    ├── app.py               # Streamlit multi-page app (Home, Vocab, Chat, Quiz, Progress, Pronunciation, SRS, Achievements)
+    └── tone_diagram.py      # Matplotlib-based tone pitch curve rendering (4 tones with color coding)
 ```
 
 ### Data Flow
@@ -109,6 +110,10 @@ The Orchestrator classifies user intent and delegates to the appropriate agent.
 - **SM-2** (`spaced_repetition.py`): quality 0-5 → updates easiness_factor, interval, next_review date
 - **Level XP** (`gamification.py`): XP(n) = 100 × 1.5^(n-1); adaptive difficulty based on recent 10 scores
 - **Quiz types**: translation (Chinese→Korean), listening (play audio→choose), fill-in-blank
+
+### Speech/TTS
+
+`SpeechHandler` uses edge-tts with `zh-CN-YunxiNeural` (male voice) as primary TTS engine. Falls back to gTTS if edge-tts is unavailable. Audio files are cached to disk (default: `audio_cache/`). Default playback rate is 0.75x (-25%).
 
 ### Environment Variables
 

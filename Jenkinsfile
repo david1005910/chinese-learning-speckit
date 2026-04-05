@@ -22,7 +22,7 @@ pipeline {
                     
                     echo "🚀 Docker Hub로 업로드합니다..."
                     // Jenkins Credentials에 등록한 'docker-hub-id' 사용
-                    withDockerRegistry([credentialsId: 'docker-hub-id', url: '']) {
+                    withDockerRegistry([credentialsId: 'sharkey', url: '']) {
                         sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:latest"
                     }
                 }

@@ -3,10 +3,10 @@ FROM python:3.10-slim
 
 # 2. 시스템 의존성 설치 (음성 처리 및 브라우저 테스트용 필수 패키지)
 # SpeechRecognition 및 Playwright 실행에 필요한 라이브러리들입니다.
-RUN apt-get update && apt-get install -y \
+# 6번 라인부터 수정
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
-    software-properties-common \
     git \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*

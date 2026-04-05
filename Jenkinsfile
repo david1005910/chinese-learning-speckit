@@ -10,6 +10,7 @@ pipeline {
         MINT_IP = "192.168.45.79"  // <-- 이 부분을 수정하세요!
         MINT_USER = "david"
         APP_NAME = "my-running-app"
+        APP_PORT = "8080" // 포트 변수를 하나 추가하거나 아래 docker run 부분을 수정합니다.
     }
 
     stages {
@@ -34,15 +35,15 @@ pipeline {
                 echo "🚚 Mint 서버(CasaOS)에 접속하여 배포를 시작합니다..."
                 // Jenkins Credentials에 등록한 'mint-ssh-key' 사용
                 sshagent(['mint-ssh-key']) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${MINT_USER}@${MINT_IP} "
-                        docker pull ${DOCKER_USER}/${IMAGE_NAME}:latest
-                        docker stop ${APP_NAME} || true
-                        docker rm ${APP_NAME} || true
-                        docker run -d --name ${APP_NAME} -p 8000:8000 --restart always ${DOCKER_USER}/${IMAGE_NAME}:latest
-                        docker image prune -f
-                    "
-                    """
+                sh """
+                ssh -o StrictHostKeyChecking=no ${MINT_USER}@${MINT_IP} "
+                   docker pull ${DOCKER_USER}/${IMAGE_NAME}:latest
+                   docker stop ${APP_NAME} || true
+                   docker rm ${APP_NAME} || true
+                   docker run -d --name ${APP_NAME} -p 8080:8501 --restart always ${DOCKER_USER}/${IMAGE_NAME}:latest
+                   docker image prune -f
+                "
+                """
                 }
             }
         }

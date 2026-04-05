@@ -2,12 +2,12 @@ pipeline {
     agent any
 
     environment {
-        // 1. Docker Hub 정보 (David님 계정)
+        // 1. Docker Hub 정보 (성공한 계정 사용)
         DOCKER_USER = "sharkey1982" 
         IMAGE_NAME = "python-fullstack-app"
         
-        // 2. Linux Mint(CasaOS) 서버 정보
-        MINT_IP = "10.55.7.142" 
+        // 2. Linux Mint(CasaOS) 서버 정보 업데이트
+        MINT_IP = "192.168.45.79"  // <-- 이 부분을 수정하세요!
         MINT_USER = "david"
         APP_NAME = "my-running-app"
     }

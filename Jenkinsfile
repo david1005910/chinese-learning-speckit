@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // 1. Docker Hub 정보 (David님 계정)
-        DOCKER_USER = "david1005910" 
+        DOCKER_USER = "sharkey1982" 
         IMAGE_NAME = "python-fullstack-app"
         
         // 2. Linux Mint(CasaOS) 서버 정보

@@ -27,7 +27,7 @@ WORKDIR /app
 
 # 4. 라이브러리 설치 (소스 코드 복사 전에 실행하여 빌드 속도 최적화)
 # requirements.txt가 있다면 COPY requirements.txt . 후 설치하세요.
-RUN pip install --no-cache-dir streamlit playwright edge-tts gTTS matplotlib pandas httpx plotly
+RUN pip install --no-cache-dir streamlit playwright edge-tts gTTS matplotlib pandas httpx plotly pypinyin
 
 # 5. Playwright 브라우저 설치
 RUN python -m playwright install chromium

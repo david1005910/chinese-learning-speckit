@@ -40,7 +40,7 @@ pipeline {
                    docker pull ${DOCKER_USER}/${IMAGE_NAME}:latest
                    docker stop ${APP_NAME} || true
                    docker rm ${APP_NAME} || true
-                   docker run -d --name ${APP_NAME} -p 8080:8501 --restart always ${DOCKER_USER}/${IMAGE_NAME}:latest
+                   docker run -d --name ${APP_NAME} -p 8081:8501 --restart always ${DOCKER_USER}/${IMAGE_NAME}:latest
                    docker image prune -f
                 "
                 """

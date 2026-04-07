@@ -17,8 +17,8 @@ WORKDIR /app
 # 4. 의존성 파일 복사 및 설치
 # (캐시 효율을 위해 소스 코드보다 requirements.txt를 먼저 복사합니다)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
+RUN pip install --no-cache-dir streamlit
+COPY ./app
 # 5. Playwright 브라우저 설치 (테스트 도구 사용 시 필요)
 RUN playwright install --with-deps chromium
 

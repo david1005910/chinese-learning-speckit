@@ -7,7 +7,7 @@ pipeline {
         IMAGE_NAME = "python-fullstack-app"
         
         // 2. Linux Mint(CasaOS) 서버 정보 업데이트
-        MINT_IP = "192.168.45.79"  // <-- 이 부분을 수정하세요!
+        MINT_IP = "100.117.139.81"  // <-- 이 부분을 수정하세요!
         MINT_USER = "david"
         APP_NAME = "my-running-app"
         APP_PORT = "8080" // 포트 변수를 하나 추가하거나 아래 docker run 부분을 수정합니다.

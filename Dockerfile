@@ -42,5 +42,5 @@ ENV PYTHONPATH=/app
 EXPOSE 8501
 
 # 9. 실행 명령 (ui/app.py 경로를 정확히 지정)
-# --server.address=0.0.0.0 설정은 외부(Tailscale) 접속을 위해 반드시 필요합니다.
-ENTRYPOINT ["streamlit", "run", "ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# ★ 수정 포인트: 파일 경로에 src/를 추가합니다.
+ENTRYPOINT ["streamlit", "run", "src/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
